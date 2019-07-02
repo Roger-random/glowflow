@@ -1,0 +1,99 @@
+//////////////////////////////////////////////////////////////////////////////
+//
+// RGB-XYZ 3D Sweep
+//
+// A Pixelblaze pattern to test a 3D pixel map by sweeping a glowing band
+// through each of three axis. The band moves in positive direction for
+// each axis.
+//
+//   Red   = X axis
+//   Green = Y axis
+//   Blue  = Z axis
+//
+// Warning: RGB ordering must be set correctly in Pixelblaze strip settings
+// of the resulting incorrectly colored sweeps will be misleading.
+//
+// Roger Cheng 2019
+// https://newscrewdriver.com
+// Github: Roger-random / Twitter: @Regorlas
+
+// Width of band expanded in either side of current sweep location
+var width = 0.2
+
+// Actual sweep distance, so a band moves in from completely off display
+// volume and moves out completely off volume.
+var range = 1+(width*2)
+
+// Band style. Use 0 (simple) for a band with a crisp edge band useful for
+// diagnosing pixel alignment issues. Use 1 (smoothed) for a band that's
+// modulated with the wave() function to be more visually appealing.
+var style = 1 // 0 = simple, 1 = smoothed
+
+// From 0 to 1, as dictated by time() function.
+var tNow
+
+// From 0 to 1, progress of current sweep.
+var sweep
+
+// From -width to 1+width, actual position of current sweep.
+var sweepFull
+
+// 0 = X, 1 = Y, 2 = Z
+var axis
+
+// Progress through XYZ sweep is dictated by time(). Divided into thirds so
+// Red sweeps across X axis in the first 1/3, Green sweeps Y in the second,
+// and Blue sweeps Z in the final 1/3.
+export function beforeRender(delta) {
+  tNow = time(0.045) // 0.045 is roughly three seconds = one second per axis
+  if (tNow < 1/3) {
+    axis = 0             // X Axis
+    sweep = tNow*3       // Get a sweep value from 0 to 1 within our third
+  } else if (tNow < 2/3) {
+    axis = 1             // Y axis
+    sweep = (tNow-1/3)*3 // Get a sweep value from 0 to 1 within our third
+  } else {
+    axis = 2             // Z axis
+    sweep = (tNow-2/3)*3 // Get a sweep value from 0 to 1 within our third
+  }
+  
+  // Expand sweep from range of 0 to 1 to range of -width to 1+width
+  sweepFull = (sweep * range)-width
+}
+
+// Render callback for each pixel with index and X,Y,Z coordiantes as per
+// Pixel Mapper
+export function render3D(index,x,y,z) {
+  var plane
+  var hue
+  if (axis == 0) {
+    plane = x
+    hue = 0 // red
+  } else if (axis == 1) {
+    plane = y
+    hue = 0.3 // green
+  } else {
+    plane = z
+    hue = 0.6 // blue
+  }
+  
+  if (plane > sweepFull-width && plane < sweepFull+width) {
+    // We are within 'width' of the current sweep location,
+    // let's light some LEDs
+    if (style == 0) {
+      // Simple sharp band
+      hsv(hue,1,1)
+    } else {
+      // Do a little math for smoother band. Fraction determines our
+      // position within the currently illuminated band.
+      fraction = (plane - (sweepFull - width))/(2*width)
+      
+      // -0.25 because wave() sinusoidal wave is a quarter wavelength
+      // out of phase for what we want.
+      hsv(hue,1,wave(fraction-0.25))
+    }
+  } else {
+    // LEDs not within 'width' of current location remain dark.
+    hsv(0,0,0)
+  }
+}
