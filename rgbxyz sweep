@@ -4,7 +4,8 @@
 //
 // A Pixelblaze pattern to test a 3D pixel map by sweeping a glowing band
 // through each of three axis. The band moves in positive direction for
-// each axis.
+// each axis. This allows visual verification that each axis are aligned in
+// expected orientations and directions.
 //
 //   Red   = X axis
 //   Green = Y axis
