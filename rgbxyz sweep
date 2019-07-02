@@ -12,7 +12,7 @@
 //   Blue  = Z axis
 //
 // Warning: RGB ordering must be set correctly in Pixelblaze strip settings
-// of the resulting incorrectly colored sweeps will be misleading.
+// or the resulting incorrectly colored sweeps will be misleading.
 //
 // Roger Cheng 2019
 // https://newscrewdriver.com
