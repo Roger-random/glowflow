@@ -1,0 +1,49 @@
+//////////////////////////////////////////////////////////////////////////////
+//
+// RGB-XYZ 3D Octants
+//
+// A non-animating Pixelblaze pattern to test a 3D pixel map by coloring each
+// of the 3D octants in a different color. The name RGB-XYZ indicates mapping
+// from the typical color order (RGB) to coordinate axes (XYZ). R means X, G 
+// means Y,and B for Z. Each of these colors are set on the high side of each
+// axis range. High side of X (0.5 to 1.0) gets red, high side of Y gets G, etc.
+// Checking colors allow visual verification that each axis are aligned in
+// expected orientation and direction.
+//
+// Octant color  |  X>0.5  |  Y>0.5  |  Z>0.5
+//        Black  |         |         |
+//         Blue  |         |         |    Y
+//        Green  |         |    Y    |
+//         Teal  |         |    Y    |    Y
+//          Red  |    Y    |         |
+//       Purple  |    Y    |         |    Y
+//       Yellow  |    Y    |    Y    |
+//        White  |    Y    |    Y    |    Y
+//
+// Warning: RGB ordering must be set correctly in Pixelblaze strip settings
+// or the resulting incorrectly colored octants will be misleading.
+//
+// Roger Cheng 2019
+// https://newscrewdriver.com
+// Github: Roger-random / Twitter: @Regorlas
+
+// Values to represent bright and dark. Change to other values to adjust 
+// intensity of each color.
+var bright = 1
+var dark = 0
+
+export function render3D(index,x,y,z) {
+  r = dark
+  g = dark
+  b = dark
+  if (x > 0.5) {
+    r = bright
+  }
+  if (y > 0.5) {
+    g = bright
+  }
+  if (z > 0.5) {
+    b = bright
+  }
+  rgb(r, g, b)
+}
