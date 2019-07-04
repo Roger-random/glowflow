@@ -1,0 +1,66 @@
+//////////////////////////////////////////////////////////////////////////////
+//
+// RGB-XYZ Accelerometer Blocks 3D
+//
+// A Pixelblaze pattern to test accelerometer response along three axis by
+// moving the "origin" of a 3D octant display, where the positive side of the
+// origin is illuminated with a color. The name RGB-XYZ indicates mapping
+// from the typical color order (RGB) to coordinate axes (XYZ). R means X, G 
+// means Y,and B for Z. Each of these colors are set on the high side of each
+// axis range. 
+//
+// Roger Cheng 2019
+// https://newscrewdriver.com
+// Github: Roger-random / Twitter: @Regorlas
+
+// Accelerometer value will be filled in by Pixelblaze when sensor board
+// is present
+export var accelerometer
+
+// Values to represent bright and dark. Change to other values to adjust 
+// intensity of each color.
+var bright = 1
+var dark = 0
+
+// Unit vector of accelerometer, divided in half and translated to origin
+// of (0.5, 0.5, 0.5) for easy mapping into render3D() space.
+var halfvect = array(3)
+
+// Previous accelerometer vector. Used to damp out jitter in accelerometer
+// values.
+var prevvect = array(3)
+
+// Damping ratio between 0.0 and 1.0
+// 0.0 = prevvect has no effect and we respond to new accelerometer readings 
+//     immediately.
+// 0.5 = prevvect and new readings are evenly averaged together.
+// 1.0 = new readings have no effect and nothing ever changes
+var damping = 0.9
+
+export function beforeRender(delta) {
+  for (i = 0; i < 3; i++) {
+    prevvect[i] = halfvect[i]
+  }
+  a = accelerometer
+  len = sqrt(pow(a[0],2) + pow(a[1],2) + pow(a[2],2) )
+  for (i = 0; i < 3; i++) {
+    unit = 0.5 + a[i]/(len*2)
+    halfvect[i] = (1-damping)*unit + damping*prevvect[i]
+  }
+}
+
+export function render3D(index,x,y,z) {
+  r = dark
+  g = dark
+  b = dark
+  if (x > halfvect[0]) {
+    r = bright
+  }
+  if (y > halfvect[1]) {
+    g = bright
+  }
+  if (z > halfvect[2]) {
+    b = bright
+  }
+  rgb(r, g, b)
+}
