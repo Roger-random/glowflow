@@ -35,13 +35,17 @@ var prevvect = array(3)
 //     immediately.
 // 0.5 = prevvect and new readings are evenly averaged together.
 // 1.0 = new readings have no effect and nothing ever changes
-var damping = 0.9
+var damping = 0.95
 
 export function beforeRender(delta) {
   for (i = 0; i < 3; i++) {
     prevvect[i] = halfvect[i]
   }
   a = accelerometer
+  
+  // Axis adjustments
+  a[0] = -a[0] // X axis is mounted reversed
+
   len = sqrt(pow(a[0],2) + pow(a[1],2) + pow(a[2],2) )
   for (i = 0; i < 3; i++) {
     unit = 0.5 + a[i]/(len*2)
