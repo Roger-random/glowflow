@@ -8,10 +8,10 @@ var accelPolar
 // Direction of accelerometer vector in spherical coordinates
 var accelAzimuth
 
-// Coordinate of pixel being rendered, in matrix multiplication form
-var mapped3D = array(4)
+// Matrix for transform calculations
+var m = array(16)
 
-// Transformed coordiate of pixel being rendered, in matrix multiplication form
+// Coordinate for matrix transform calculations
 var tx3D = array(4)
 
 // For each rendering frame, take an accelerometer reading and generate
@@ -25,106 +25,79 @@ export function beforeRender(delta) {
 
   // Calculate polar and azimuth angles
   accelPolar = atan(sqrt(pow(a[0],2)+pow(a[1],2))/a[2])
-  if (a[0] > 0) {
+  if (a[0] == 0) {
+    if (a[1] >= 0) {
+      accelAzimuth = PI/2
+    } else {
+      accelAzimuth = 3*PI/2
+    }
+  } else if (a[0] > 0) {
     accelAzimuth = atan(a[1]/a[0])
   } else {
     accelAzimuth = PI-atan(a[1]/-a[0])
   }
+
+  // Set transform matrix to identity
+  setIdentity()
 }
 
-var matrix = array(16)
-function setIdentityMatrix() {
-  matrix[0]  = 1
-  matrix[1]  = 0
-  matrix[2]  = 0
-  matrix[3]  = 0
-
-  matrix[4]  = 0
-  matrix[5]  = 1
-  matrix[6]  = 0
-  matrix[7]  = 0
-
-  matrix[8]  = 0
-  matrix[9]  = 0
-  matrix[10] = 1
-  matrix[11] = 0
-
-  matrix[12] = 0
-  matrix[13] = 0
-  matrix[14] = 0
-  matrix[15] = 1
-}
-
-function setTranslationMatrix(x, y, z) {
-  setIdentityMatrix()
-
-  matrix[12] = x
-  matrix[13] = y
-  matrix[14] = z
-}
-
-function setRotateXAxis(angle) {
-  setIdentityMatrix()
-
-  matrix[5]  = cos(angle)
-  matrix[6]  = -sin(angle)
-
-  matrix[9]  = sin(angle)
-  matrix[10] = cos(angle)
+// 3D transform matrix math adapted from
+// https://developer.mozilla.org/en-US/docs/Web/API/WebGL_API/Matrix_math_for_the_web
+function setIdentity() {
+  m[0]  = 1;  m[1]  = 0;  m[2]  = 0;  m[3]  = 0
+  m[4]  = 0;  m[5]  = 1;  m[6]  = 0;  m[7]  = 0
+  m[8]  = 0;  m[9]  = 0;  m[10] = 1;  m[11] = 0
+  m[12] = 0;  m[13] = 0;  m[14] = 0;  m[15] = 1
 }
 
 function setRotateYAxis(angle) {
-  setIdentityMatrix()
+  /* General form
+  m[0]=cos(angle); m[1]  = 0;  m[2]=sin(angle); m[3]  = 0
+  m[4]  = 0;       m[5]  = 1;  m[6]  = 0;       m[7]  = 0
+  m[8]=-sin(angle);m[9]  = 0;  m[10]=cos(angle);m[11] = 0
+  m[12] = 0;       m[13] = 0;  m[14] = 0;       m[15] = 1
+  */
 
-  matrix[0]  = cos(angle)
-  matrix[2]  = sin(angle)
-
-  matrix[8]  = -sin(angle)
-  matrix[10] = cos(angle)
+  // Optimized for this specific application removing terms that don't change
+  m[0]=cos(angle); m[1]  = 0;  m[2]=sin(angle)
+  m[4]  = 0;       m[5]  = 1
+  m[8]=-sin(angle);            m[10]=cos(angle)
 }
 
 function setRotateZAxis(angle) {
-  setIdentityMatrix()
+  /* General form
+  m[0]=cos(angle);m[1]=-sin(angle);m[2]  = 0;  m[3]  = 0
+  m[4]=sin(angle);m[5]=cos(angle); m[6]  = 0;  m[7]  = 0
+  m[8]  = 0;      m[9]  = 0;       m[10] = 1;  m[11] = 0
+  m[12] = 0;      m[13] = 0;       m[14] = 0;  m[15] = 1
+  */
 
-  matrix[0]  = cos(angle)
-  matrix[1]  = -sin(angle)
-
-  matrix[4]  = sin(angle)
-  matrix[5]  = cos(angle)
+  // Optimized for this specific application removing terms that don't change
+  m[0]=cos(angle);m[1]=-sin(angle);m[2]  = 0
+  m[4]=sin(angle);m[5]=cos(angle)
+  m[8]  = 0;                       m[10] = 1
 }
 
-var result = array(4)
+function matrixMultiply() {
+  // Make a copy of point coordinates
+  var x = tx3D[0];
+  var y = tx3D[1];
+  var z = tx3D[2];
+  var w = tx3D[3];
 
-// Adapted from https://developer.mozilla.org/en-US/docs/Web/API/WebGL_API/Matrix_math_for_the_web
-function multiplyMatrixAndPoint(point) {
-  //Give a simple variable name to each part of the matrix, a column and row number
-  var c0r0 = matrix[ 0], c1r0 = matrix[ 1], c2r0 = matrix[ 2], c3r0 = matrix[ 3];
-  var c0r1 = matrix[ 4], c1r1 = matrix[ 5], c2r1 = matrix[ 6], c3r1 = matrix[ 7];
-  var c0r2 = matrix[ 8], c1r2 = matrix[ 9], c2r2 = matrix[10], c3r2 = matrix[11];
-  var c0r3 = matrix[12], c1r3 = matrix[13], c2r3 = matrix[14], c3r3 = matrix[15];
+  /* general form
+  tx3D[0] = (x * m[ 0]) + (y * m[ 4]) + (z * m[ 8]) + (w * m[12]);
+  tx3D[1] = (x * m[ 1]) + (y * m[ 5]) + (z * m[ 9]) + (w * m[13]);
+  tx3D[2] = (x * m[ 2]) + (y * m[ 6]) + (z * m[10]) + (w * m[14]);
+  tx3D[3] = (x * m[ 3]) + (y * m[ 7]) + (z * m[11]) + (w * m[15]);
+  */
 
-  //Now set some simple names for the point
-  var x = point[0];
-  var y = point[1];
-  var z = point[2];
-  var w = point[3];
-
-  //Multiply the point against each part of the 1st column, then add together
-  var resultX = (x * c0r0) + (y * c0r1) + (z * c0r2) + (w * c0r3);
-
-  //Multiply the point against each part of the 2nd column, then add together
-  var resultY = (x * c1r0) + (y * c1r1) + (z * c1r2) + (w * c1r3);
-
-  //Multiply the point against each part of the 3rd column, then add together
-  var resultZ = (x * c2r0) + (y * c2r1) + (z * c2r2) + (w * c2r3);
-
-  //Multiply the point against each part of the 4th column, then add together
-  var resultW = (x * c3r0) + (y * c3r1) + (z * c3r2) + (w * c3r3);
-
-  result[0] = resultX
-  result[1] = resultY
-  result[2] = resultZ
-  result[3] = resultW
+  // Optimized for this specific application. Terms that are
+  // always zero for us are removed.
+  tx3D[0] = (x * m[ 0]) + (y * m[ 4]) + (z * m[ 8])              ;
+  tx3D[1] = (x * m[ 1]) + (y * m[ 5])                            ;
+  tx3D[2] = (x * m[ 2])               + (z * m[10])              ;
+  tx3D[3] =                                           w          ;
 }
 
 export function render3D(index,x,y,z) {
@@ -134,23 +107,18 @@ export function render3D(index,x,y,z) {
   localY = y*2.0-1.0
   localZ = z*2.0-1.0
 
-  mapped3D[0] = localX
-  mapped3D[1] = localY
-  mapped3D[2] = localZ
-  mapped3D[3] = 1
+  tx3D[0] = localX
+  tx3D[1] = localY
+  tx3D[2] = localZ
+  tx3D[3] = 1
 
   setRotateZAxis(accelAzimuth)
-  multiplyMatrixAndPoint(mapped3D)
-
-  mapped3D[0] = result[0]
-  mapped3D[1] = result[1]
-  mapped3D[2] = result[2]
-  mapped3D[3] = result[3]
+  matrixMultiply()
 
   setRotateYAxis(accelPolar)
-  multiplyMatrixAndPoint(mapped3D)
+  matrixMultiply()
 
-  probe = result[2]
+  probe = tx3D[2]
 
   if (probe < 0) {
     hsv(0.01,1,0.1)
