@@ -12,10 +12,9 @@
 //
 // To use as starting point for other accelerometer-reactive 3D Pixelblaze projects:
 // * In beforeRender(), modify accelerometer readings so that its X,Y,Z values
-//   matches physical X,Y,Z of LEDs as described in Pixel Mapper.
-// * In render3D(), make additional 3D transforms as desired.
-// * At the end of render3D(), use the transformed X/Y/Z values in tx3D[] array
-//   to set LED color as desired.
+//   are aligned with physical X,Y,Z of LEDs as described in Pixel Mapper.
+// * At the end of render3D(), use the accelerometer-transformed X/Y/Z values
+//   in tx3D[] array to set color as desired.
 //
 // Roger Cheng 2019
 // https://newscrewdriver.com
@@ -159,7 +158,12 @@ export function render3D(index,x,y,z) {
   matrixMultiply()
 
   // Rendering based on Z axis in transformed space
-  if (tx3D[2] > 0) {
-    hsv(0,0,1)
+  txZ = tx3D[2]
+  if (txZ > 0) {
+    // Colorful multilayered liquid in the bottom of container
+    hsv(txZ*0.6,1,1)
+  } else {
+    // Fades to dark as we get further above surface of liquid
+    hsv(0.01,1,1+txZ)
   }
 }
