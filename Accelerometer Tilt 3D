@@ -1,0 +1,95 @@
+// Accelerometer value will be filled in by Pixelblaze when sensor board
+// is present
+export var accelerometer
+
+// Unit accelerometer vector
+var unitvect = array(3)
+
+// Tilt from Z axis in radians. 0 = sitting flat, Pi = upside down.
+var tiltZ
+
+// Number of milliseconds in between accelerometer readings
+var updatePeriod = 1000
+
+// Time of last accelerometer reading in terms of 'delta' passed in to 
+// beforeRender() )
+var lastUpdate = 0
+
+// For each rendering frame, take an accelerometer reading and generate
+// unit vector for direction. From that, calculate tilt off Z.
+export function beforeRender(delta) {
+  // Detect overflow
+  if (lastUpdate > lastUpdate + updatePeriod) {
+    lastUpdate = 0
+  }
+
+  if (delta > lastUpdate + updatePeriod)
+  {
+    // Take snapshot of accelerometer
+    a = accelerometer
+
+    // Adjust axis to fit mechanical chassis
+    a[0] = -a[0] // X axis is mounted reversed
+
+    // Calculate unit vector
+    len = sqrt(pow(a[0],2) + pow(a[1],2) + pow(a[2],2) )
+    
+    for (i = 0; i < 3; i++) {
+      unitvect[i] = a[i]/len
+    } 
+
+    // Calculate tilt off of Z axis
+    tiltZ = acos(unitvect[2])
+
+    // Update counters
+    lastUpdate = delta
+  }
+}
+
+function clipRad(original) {
+  clipped = original
+  while (clipped < 0) {
+    clipped = clipped + 2*PI
+  }
+  while (clipped > 2*PI) {
+    clipped = clipped - 2*PI
+  }
+  return clipped
+}
+
+export function render3D(index,x,y,z) {
+  // x,y,z are in range from 0 to 1. Upscale them to range -1 to 1.
+  // This moves (0,0,0) to the center of the volume, and all trig
+  // calculations are in a unit circle (2D) or unit sphere (3D).
+  localX = x*2.0-1.0
+  localY = y*2.0-1.0
+  localZ = z*2.0-1.0
+
+  alpha = 0
+
+  if (abs(localX) <= 0.01) {
+    if (localZ < 0) {
+      alpha = PI/2.0
+    } else {
+      alpha = 3.0*PI/2.0
+    }    
+  } else if (localX > 0) {
+    alpha = atan(localZ/localX)
+  } else {
+    alpha = PI - atan(localZ/-localX)
+  }
+
+  beta = alpha - tiltZ
+  
+  gamma = clipRad(beta)
+  
+  if (gamma < 0) {
+    hsv(0.3,1,1)
+  } else if (gamma < PI) {
+    hsv(0.01,1,1)
+  } else if (gamma > PI ) {
+    hsv(0.01,1,0.1)
+  } else if (gamma > 2*PI) {
+    hsv(0.6,1,1)
+  }
+}
