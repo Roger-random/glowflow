@@ -10,11 +10,12 @@
 // * Pixelblaze with sensor expansion board
 // * Pixel Mapper filled in with 3D (X,Y,Z) coordinates of LED pixels
 //
-// Use for other accelerometer-reactive Pixelblaze projects:
+// To use as starting point for other accelerometer-reactive 3D Pixelblaze projects:
 // * In beforeRender(), modify accelerometer readings so that its X,Y,Z values
-//   are aligned with X,Y,Z axis of LEDs in Pixel Mapper
-// * At the end of render3D(), use the accelerometer-transformed X/Y/Z values
-//   in tx3D[] array to set color as desired
+//   matches physical X,Y,Z of LEDs as described in Pixel Mapper.
+// * In render3D(), make additional 3D transforms as desired.
+// * At the end of render3D(), use the transformed X/Y/Z values in tx3D[] array
+//   to set LED color as desired.
 //
 // Roger Cheng 2019
 // https://newscrewdriver.com
