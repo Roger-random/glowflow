@@ -28,17 +28,6 @@ export function beforeRender(delta) {
   // Comment this out until PB bug fixed tiltZ = acos(unitvect[2])
 }
 
-function clipRad(original) {
-  clipped = original
-  while (clipped < 0) {
-    clipped = clipped + 2*PI
-  }
-  while (clipped > 2*PI) {
-    clipped = clipped - 2*PI
-  }
-  return clipped
-}
-
 export function render3D(index,x,y,z) {
   // x,y,z are in range from 0 to 1. Upscale them to range -1 to 1.
   // This moves (0,0,0) to the center of the volume.
@@ -50,17 +39,21 @@ export function render3D(index,x,y,z) {
   // Formula from https://en.wikipedia.org/wiki/List_of_common_coordinate_transformations#From_Cartesian_coordinates_2
   radius = sqrt(pow(localX,2) + pow(localY,2) + pow(localZ,2))
   polarAng = atan2(sqrt(pow(localX,2)+pow(localY,2))/localZ)
-  azimuthAng = atan(localY/localX)
+  if (localX > 0) {
+    azimuthAng = atan(localY/localX)
+  } else {
+    azimuthAng = atan(localY/-localX)
+  }
 
   hue = 0.01
 
-  probe = azimuthAng/PI
+  probe = 0.5 + azimuthAng/PI
 
   if (probe > 1) {
-    hsv(probe, 1, wave(time(0.005)))
+    hsv(probe, 1, wave(time(0.05)))
   } else if (probe > 0) {
     hsv(probe, 1, 0.1)
   } else {
-    hsv(probe, wave(time(0.005)),0.1)
+    hsv(probe, wave(time(0.015)),0.1)
   }
 }
