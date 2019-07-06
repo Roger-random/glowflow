@@ -6,7 +6,13 @@ export var accelerometer
 var unitvect = array(3)
 
 // Tilt from Z axis in radians. 0 = sitting flat, Pi = upside down.
-var tiltZ
+//var tiltZ
+
+// Tilt of accelerometer vector in spherical coordinates.
+var accelPolar
+
+// Direction of accelerometer vector in spherical coordinates
+var accelAzimuth
 
 // Coordinate of pixel being rendered, in matrix multiplication form
 var mapped3D = array(4)
@@ -30,8 +36,14 @@ export function beforeRender(delta) {
     unitvect[i] = a[i]/len
   }
 
+  // Calculate polar and azimuth angles
+  accelPolar = atan(sqrt(pow(unitvect[0],2)+pow(unitvect[1],2))/unitvect[2])
+  accelAzimuth = atan(unitvect[1]/unitvect[0])
+
+/*
   // Calculate tilt off of Z axis
-  // Comment this out until PB bug fixed tiltZ = acos(unitvect[2])
+  tiltZ = acos(unitvect[2])
+*/
 }
 
 var matrix = array(16)
@@ -117,8 +129,6 @@ function multiplyMatrixAndPoint(point) {
   result[1] = resultY
   result[2] = resultZ
   result[3] = resultW
-
-  return result
 }
 
 export function render3D(index,x,y,z) {
@@ -133,13 +143,20 @@ export function render3D(index,x,y,z) {
   mapped3D[2] = localZ
   mapped3D[3] = 1
 
-  setRotateXAxis(time(0.5)*PI2)
+  setRotateZAxis(accelAzimuth)
+  multiplyMatrixAndPoint(mapped3D)
 
-  result[2] = 0
+  mapped3D[0] = result[0]
+  mapped3D[1] = result[1]
+  mapped3D[2] = result[2]
+  mapped3D[3] = result[3]
+
+  setRotateXAxis(accelPolar)
   multiplyMatrixAndPoint(mapped3D)
 
   probe = result[2]
 
+  /*
   if (probe > 1) {
     hsv(probe, 1, wave(time(0.0045))/10)
   } else if (probe >= 0) {
@@ -148,5 +165,9 @@ export function render3D(index,x,y,z) {
     hsv(probe, wave(time(0.045)),wave(time(0.0045))/10)
   } else {
     hsv(probe, wave(time(0.045)),0.1)
+  }
+  */
+  if (probe < 0) {
+    hsv(0.01,1,0.1)
   }
 }
