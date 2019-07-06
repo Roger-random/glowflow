@@ -5,7 +5,7 @@ export var accelerometer
 // Tilt of accelerometer vector in spherical coordinates.
 var accelPolar
 
-// Direction of accelerometer vector in spherical coordinates
+// Azimuth of accelerometer vector in spherical coordinates
 var accelAzimuth
 
 // Matrix for transform calculations
@@ -14,8 +14,8 @@ var m = array(16)
 // Coordinate for matrix transform calculations
 var tx3D = array(4)
 
-// For each rendering frame, take an accelerometer reading and generate
-// unit vector for direction. From that, calculate tilt off Z.
+// For each rendering frame, take an accelerometer reading and convert it
+// to spherical coordinates
 export function beforeRender(delta) {
   // Take snapshot of accelerometer
   a = accelerometer
@@ -24,7 +24,14 @@ export function beforeRender(delta) {
   a[0] = -a[0] // X axis is mounted reversed
 
   // Calculate polar and azimuth angles
-  accelPolar = atan(sqrt(pow(a[0],2)+pow(a[1],2))/a[2])
+  if (a[2] == 0) {
+    accelPolar = PI/2
+  } else if (a[2] >= 0) {
+    accelPolar = atan(sqrt(pow(a[0],2)+pow(a[1],2))/a[2])
+  } else {
+    accelPolar = PI-atan(sqrt(pow(a[0],2)+pow(a[1],2))/-a[2])
+  }
+
   if (a[0] == 0) {
     if (a[1] >= 0) {
       accelAzimuth = PI/2
@@ -120,7 +127,7 @@ export function render3D(index,x,y,z) {
 
   probe = tx3D[2]
 
-  if (probe < 0) {
+  if (probe > 0) {
     hsv(0.01,1,0.1)
   }
 }
