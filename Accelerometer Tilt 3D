@@ -1,11 +1,37 @@
-// Accelerometer value will be filled in by Pixelblaze when sensor board
-// is present
+//////////////////////////////////////////////////////////////////////////////
+//
+// Accelerometer Tilt 3D
+//
+// A Pixelblaze pattern to illuminate half of a 3D mapped volume based on value of
+// accelerometer on the Pixelblaze sensor expansion board. Renders illusion of a
+// half-full container of glowing fluid that flows to the bottom.
+//
+// Requires:
+// * Pixelblaze with sensor expansion board
+// * Pixel Mapper filled in with 3D (X,Y,Z) coordinates of LED pixels
+//
+// Use for other accelerometer-reactive Pixelblaze projects:
+// * In beforeRender(), modify accelerometer readings so that its X,Y,Z values
+//   are aligned with X,Y,Z axis of LEDs in Pixel Mapper
+// * At the end of render3D(), use the accelerometer-transformed X/Y/Z values
+//   in tx3D[] array to set color as desired
+//
+// Roger Cheng 2019
+// https://newscrewdriver.com
+// Github: Roger-random / Twitter: @Regorlas
+
+// Accelerometer value will be filled in by Pixelblaze when sensor board is present
 export var accelerometer
 
-// Tilt of accelerometer vector in spherical coordinates.
+// How far the accelerometer vector has tilted relative to +Z axis in spherical coordinates.
+// 0 = vector is pointing up, aligned with +Z
+// PI = vector is pointing down, aligned with -Z
 var accelPolar
 
-// Azimuth of accelerometer vector in spherical coordinates
+// Which direction the accelerometer vector is tilted in spherical coordinates
+// 0 = vector is aligned with +X
+// PI/2 = vector is aligned with +Y
+// -PI/2 = vector is aligned with -Y
 var accelAzimuth
 
 // Matrix for transform calculations
@@ -14,8 +40,8 @@ var m = array(16)
 // Coordinate for matrix transform calculations
 var tx3D = array(4)
 
-// For each rendering frame, take an accelerometer reading and convert it
-// to spherical coordinates
+// Before rendering each frame, take an accelerometer reading and convert to spherical coordinates
+// https://en.wikipedia.org/wiki/List_of_common_coordinate_transformations#From_Cartesian_coordinates_2
 export function beforeRender(delta) {
   // Take snapshot of accelerometer
   a = accelerometer
@@ -23,24 +49,35 @@ export function beforeRender(delta) {
   // Adjust axis to fit mechanical chassis
   a[0] = -a[0] // X axis is mounted reversed
 
-  // Calculate polar and azimuth angles
+  // Calculate polar angle
   if (a[2] == 0) {
+    // Z = 0 means acceleration vector is somewhere on XY plane.
+    // Hard code answer is faster and avoids divide by zero.
     accelPolar = PI/2
-  } else if (a[2] >= 0) {
+  } else if (a[2] > 0) {
+    // +Z = between 0 and PI/2
     accelPolar = atan(sqrt(pow(a[0],2)+pow(a[1],2))/a[2])
   } else {
+    // -Z = between PI/2 and PI
     accelPolar = PI-atan(sqrt(pow(a[0],2)+pow(a[1],2))/-a[2])
   }
 
+  // Calculate azimuth angle
   if (a[0] == 0) {
+    // X of zero means acceleration vector is aligned with Y axis one way or another.
+    // Hard code answer is faster and avoids divide by zero
     if (a[1] >= 0) {
+      // Aligned with +Y axis
       accelAzimuth = PI/2
     } else {
-      accelAzimuth = 3*PI/2
+      // Aligned with -Y axis
+      accelAzimuth = -PI/2
     }
   } else if (a[0] > 0) {
+    // +X = somewhere between -PI/2 and PI/2
     accelAzimuth = atan(a[1]/a[0])
   } else {
+    // -X = somewhere between PI and PI/2 for +Y, between -PI and -PI/2 for -Y
     accelAzimuth = PI-atan(a[1]/-a[0])
   }
 
@@ -65,7 +102,7 @@ function setRotateYAxis(angle) {
   m[12] = 0;       m[13] = 0;  m[14] = 0;       m[15] = 1
   */
 
-  // Optimized for this specific application removing terms that don't change
+  // Optimized by removing terms that don't change for this program
   m[0]=cos(angle); m[1]  = 0;  m[2]=sin(angle)
   m[4]  = 0;       m[5]  = 1
   m[8]=-sin(angle);            m[10]=cos(angle)
@@ -79,7 +116,7 @@ function setRotateZAxis(angle) {
   m[12] = 0;      m[13] = 0;       m[14] = 0;  m[15] = 1
   */
 
-  // Optimized for this specific application removing terms that don't change
+  // Optimized by removing terms that don't change for this program
   m[0]=cos(angle);m[1]=-sin(angle);m[2]  = 0
   m[4]=sin(angle);m[5]=cos(angle)
   m[8]  = 0;                       m[10] = 1
@@ -99,24 +136,19 @@ function matrixMultiply() {
   tx3D[3] = (x * m[ 3]) + (y * m[ 7]) + (z * m[11]) + (w * m[15]);
   */
 
-  // Optimized for this specific application. Terms that are
-  // always zero for us are removed.
+  // Optimized by removing terms that don't change for this program
   tx3D[0] = (x * m[ 0]) + (y * m[ 4]) + (z * m[ 8])              ;
   tx3D[1] = (x * m[ 1]) + (y * m[ 5])                            ;
   tx3D[2] = (x * m[ 2])               + (z * m[10])              ;
-  tx3D[3] =                                           w          ;
+  tx3D[3] =                                            w         ;
 }
 
 export function render3D(index,x,y,z) {
   // x,y,z are in range from 0 to 1. Upscale them to range -1 to 1.
   // This moves (0,0,0) to the center of the volume.
-  localX = x*2.0-1.0
-  localY = y*2.0-1.0
-  localZ = z*2.0-1.0
-
-  tx3D[0] = localX
-  tx3D[1] = localY
-  tx3D[2] = localZ
+  tx3D[0] = x*2.0-1.0
+  tx3D[1] = y*2.0-1.0
+  tx3D[2] = z*2.0-1.0
   tx3D[3] = 1
 
   setRotateZAxis(accelAzimuth)
@@ -125,9 +157,8 @@ export function render3D(index,x,y,z) {
   setRotateYAxis(accelPolar)
   matrixMultiply()
 
-  probe = tx3D[2]
-
-  if (probe > 0) {
-    hsv(0.01,1,0.1)
+  // Rendering based on Z axis in transformed space
+  if (tx3D[2] > 0) {
+    hsv(0,0,1)
   }
 }
