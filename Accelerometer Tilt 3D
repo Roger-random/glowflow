@@ -25,10 +25,7 @@ export function beforeRender(delta) {
   }
 
   // Calculate tilt off of Z axis
-  tiltZ = acos(unitvect[2])
-
-  // Update counters
-  lastUpdate = delta
+  // Comment this out until PB bug fixed tiltZ = acos(unitvect[2])
 }
 
 function clipRad(original) {
@@ -44,38 +41,26 @@ function clipRad(original) {
 
 export function render3D(index,x,y,z) {
   // x,y,z are in range from 0 to 1. Upscale them to range -1 to 1.
-  // This moves (0,0,0) to the center of the volume, and all trig
-  // calculations are in a unit circle (2D) or unit sphere (3D).
+  // This moves (0,0,0) to the center of the volume.
   localX = x*2.0-1.0
   localY = y*2.0-1.0
   localZ = z*2.0-1.0
 
-  alpha = 0
+  // Convert from cartesian to spherical coordinates
+  // Formula from https://en.wikipedia.org/wiki/List_of_common_coordinate_transformations#From_Cartesian_coordinates_2
+  radius = sqrt(pow(localX,2) + pow(localY,2) + pow(localZ,2))
+  polarAng = atan2(sqrt(pow(localX,2)+pow(localY,2))/localZ)
+  azimuthAng = atan(localY/localX)
 
-  if (abs(localX) <= 0.01) {
-    if (localZ < 0) {
-      alpha = PI/2.0
-    } else {
-      alpha = 3.0*PI/2.0
-    }
-  } else if (localX > 0) {
-    alpha = atan(localZ/localX)
+  hue = 0.01
+
+  probe = azimuthAng/PI
+
+  if (probe > 1) {
+    hsv(probe, 1, wave(time(0.005)))
+  } else if (probe > 0) {
+    hsv(probe, 1, 0.1)
   } else {
-    alpha = PI - atan(localZ/-localX)
-  }
-
-  beta = alpha - tiltZ
-
-  gamma = clipRad(beta)
-
-  if (gamma < 0) {
-    hsv(0.3,1,1)
-  } else if (gamma < PI) {
-    hsv(0.01,1,1)
-  } else if (gamma > PI ) {
-    surfDist = 0.1-abs(sin(gamma))/10
-    hsv(0.01,1,surfDist)
-  } else if (gamma > 2*PI) {
-    hsv(0.6,1,1)
+    hsv(probe, wave(time(0.005)),0.1)
   }
 }
