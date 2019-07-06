@@ -8,6 +8,12 @@ var unitvect = array(3)
 // Tilt from Z axis in radians. 0 = sitting flat, Pi = upside down.
 var tiltZ
 
+// Coordinate of pixel being rendered, in matrix multiplication form
+var mapped3D = array(4)
+
+// Transformed coordiate of pixel being rendered, in matrix multiplication form
+var tx3D = array(4)
+
 // For each rendering frame, take an accelerometer reading and generate
 // unit vector for direction. From that, calculate tilt off Z.
 export function beforeRender(delta) {
@@ -28,6 +34,72 @@ export function beforeRender(delta) {
   // Comment this out until PB bug fixed tiltZ = acos(unitvect[2])
 }
 
+var matrix = array(16)
+function setIdentityMatrix() {
+  matrix[0]  = 1
+  matrix[1]  = 0
+  matrix[2]  = 0
+  matrix[3]  = 0
+
+  matrix[4]  = 0
+  matrix[5]  = 1
+  matrix[6]  = 0
+  matrix[7]  = 0
+
+  matrix[8]  = 0
+  matrix[9]  = 0
+  matrix[10] = 1
+  matrix[11] = 0
+
+  matrix[12] = 0
+  matrix[13] = 0
+  matrix[14] = 0
+  matrix[15] = 1
+}
+
+function setTranslationMatrix(x, y, z) {
+  setIdentityMatrix()
+
+  matrix[12] = x
+  matrix[13] = y
+  matrix[14] = z
+}
+
+var result = array(4)
+
+function multiplyMatrixAndPoint(point) {
+  //Give a simple variable name to each part of the matrix, a column and row number
+  var c0r0 = matrix[ 0], c1r0 = matrix[ 1], c2r0 = matrix[ 2], c3r0 = matrix[ 3];
+  var c0r1 = matrix[ 4], c1r1 = matrix[ 5], c2r1 = matrix[ 6], c3r1 = matrix[ 7];
+  var c0r2 = matrix[ 8], c1r2 = matrix[ 9], c2r2 = matrix[10], c3r2 = matrix[11];
+  var c0r3 = matrix[12], c1r3 = matrix[13], c2r3 = matrix[14], c3r3 = matrix[15];
+
+  //Now set some simple names for the point
+  var x = point[0];
+  var y = point[1];
+  var z = point[2];
+  var w = point[3];
+
+  //Multiply the point against each part of the 1st column, then add together
+  var resultX = (x * c0r0) + (y * c0r1) + (z * c0r2) + (w * c0r3);
+
+  //Multiply the point against each part of the 2nd column, then add together
+  var resultY = (x * c1r0) + (y * c1r1) + (z * c1r2) + (w * c1r3);
+
+  //Multiply the point against each part of the 3rd column, then add together
+  var resultZ = (x * c2r0) + (y * c2r1) + (z * c2r2) + (w * c2r3);
+
+  //Multiply the point against each part of the 4th column, then add together
+  var resultW = (x * c3r0) + (y * c3r1) + (z * c3r2) + (w * c3r3);
+
+  result[0] = resultX
+  result[1] = resultY
+  result[2] = resultZ
+  result[3] = resultW
+
+  return result
+}
+
 export function render3D(index,x,y,z) {
   // x,y,z are in range from 0 to 1. Upscale them to range -1 to 1.
   // This moves (0,0,0) to the center of the volume.
@@ -35,25 +107,23 @@ export function render3D(index,x,y,z) {
   localY = y*2.0-1.0
   localZ = z*2.0-1.0
 
-  // Convert from cartesian to spherical coordinates
-  // Formula from https://en.wikipedia.org/wiki/List_of_common_coordinate_transformations#From_Cartesian_coordinates_2
-  radius = sqrt(pow(localX,2) + pow(localY,2) + pow(localZ,2))
-  polarAng = atan2(sqrt(pow(localX,2)+pow(localY,2))/localZ)
-  if (localX > 0) {
-    azimuthAng = atan(localY/localX)
-  } else {
-    azimuthAng = atan(localY/-localX)
-  }
+  mapped3D[0] = localX
+  mapped3D[1] = localY
+  mapped3D[2] = localZ
+  mapped3D[3] = 1
 
-  hue = 0.01
+  setTranslationMatrix(0,0,0)
 
-  probe = 0.5 + azimuthAng/PI
+  result[2] = 0
+  multiplyMatrixAndPoint(mapped3D)
+
+  probe = result[2]
 
   if (probe > 1) {
-    hsv(probe, 1, wave(time(0.05)))
-  } else if (probe > 0) {
+    hsv(probe, 1, wave(time(0.001)))
+  } else if (probe >= 0) {
     hsv(probe, 1, 0.1)
   } else {
-    hsv(probe, wave(time(0.015)),0.1)
+    hsv(probe, wave(time(0.045)),0.1)
   }
 }
