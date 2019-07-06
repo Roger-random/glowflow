@@ -65,8 +65,29 @@ function setTranslationMatrix(x, y, z) {
   matrix[14] = z
 }
 
+function setRotateXAxis(angle) {
+  setIdentityMatrix()
+
+  matrix[5]  = cos(angle)
+  matrix[6]  = -sin(angle)
+
+  matrix[9]  = sin(angle)
+  matrix[10] = cos(angle)
+}
+
+function setRotateZAxis(angle) {
+  setIdentityMatrix()
+
+  matrix[0]  = cos(angle)
+  matrix[1]  = -sin(angle)
+
+  matrix[4]  = sin(angle)
+  matrix[5]  = cos(angle)
+}
+
 var result = array(4)
 
+// Adapted from https://developer.mozilla.org/en-US/docs/Web/API/WebGL_API/Matrix_math_for_the_web
 function multiplyMatrixAndPoint(point) {
   //Give a simple variable name to each part of the matrix, a column and row number
   var c0r0 = matrix[ 0], c1r0 = matrix[ 1], c2r0 = matrix[ 2], c3r0 = matrix[ 3];
@@ -112,7 +133,7 @@ export function render3D(index,x,y,z) {
   mapped3D[2] = localZ
   mapped3D[3] = 1
 
-  setTranslationMatrix(0,0,0)
+  setRotateXAxis(time(0.5)*PI2)
 
   result[2] = 0
   multiplyMatrixAndPoint(mapped3D)
@@ -120,9 +141,11 @@ export function render3D(index,x,y,z) {
   probe = result[2]
 
   if (probe > 1) {
-    hsv(probe, 1, wave(time(0.001)))
+    hsv(probe, 1, wave(time(0.0045))/10)
   } else if (probe >= 0) {
     hsv(probe, 1, 0.1)
+  } else if (probe < -1) {
+    hsv(probe, wave(time(0.045)),wave(time(0.0045))/10)
   } else {
     hsv(probe, wave(time(0.045)),0.1)
   }
