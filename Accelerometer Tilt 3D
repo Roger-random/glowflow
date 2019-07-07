@@ -83,69 +83,66 @@ export function beforeRender(delta) {
   }
 
   // Precalculate rotation matrices
-  setRotateZAxis(accelAzimuth)
-  setRotateYAxis(accelPolar)
+  setRotateAboutZAxis(accelAzimuth)
+  setRotateAboutYAxis(accelPolar)
 }
 
 // 3D transform matrix math adapted from
 // https://developer.mozilla.org/en-US/docs/Web/API/WebGL_API/Matrix_math_for_the_web
-function setIdentity(m) {
-  m[0]  = 1;  m[1]  = 0;  m[2]  = 0;  m[3]  = 0
-  m[4]  = 0;  m[5]  = 1;  m[6]  = 0;  m[7]  = 0
-  m[8]  = 0;  m[9]  = 0;  m[10] = 1;  m[11] = 0
-  m[12] = 0;  m[13] = 0;  m[14] = 0;  m[15] = 1
+function setRotateAboutZAxis(angle) {
+  mRotateZ[0]=cos(angle);mRotateZ[1]=-sin(angle);mRotateZ[2]  = 0;  mRotateZ[3]  = 0
+  mRotateZ[4]=sin(angle);mRotateZ[5]=cos(angle); mRotateZ[6]  = 0;  mRotateZ[7]  = 0
+  mRotateZ[8]  = 0;      mRotateZ[9]  = 0;       mRotateZ[10] = 1;  mRotateZ[11] = 0
+  mRotateZ[12] = 0;      mRotateZ[13] = 0;       mRotateZ[14] = 0;  mRotateZ[15] = 1
 }
 
-function setRotateYAxis(angle) {
-  /* General form
-  m[0]=cos(angle); m[1]  = 0;  m[2]=sin(angle); m[3]  = 0
-  m[4]  = 0;       m[5]  = 1;  m[6]  = 0;       m[7]  = 0
-  m[8]=-sin(angle);m[9]  = 0;  m[10]=cos(angle);m[11] = 0
-  m[12] = 0;       m[13] = 0;  m[14] = 0;       m[15] = 1
-  */
-
-  var m = mRotateY
-  setIdentity(m)
-  // Optimized by removing terms that don't change for this program
-  m[0]=cos(angle); m[1]  = 0;  m[2]=sin(angle)
-  m[4]  = 0;       m[5]  = 1
-  m[8]=-sin(angle);            m[10]=cos(angle)
-}
-
-function setRotateZAxis(angle) {
-  /* General form
-  m[0]=cos(angle);m[1]=-sin(angle);m[2]  = 0;  m[3]  = 0
-  m[4]=sin(angle);m[5]=cos(angle); m[6]  = 0;  m[7]  = 0
-  m[8]  = 0;      m[9]  = 0;       m[10] = 1;  m[11] = 0
-  m[12] = 0;      m[13] = 0;       m[14] = 0;  m[15] = 1
-  */
-  var m = mRotateZ
-  setIdentity(m)
-  // Optimized by removing terms that don't change for this program
-  m[0]=cos(angle);m[1]=-sin(angle);m[2]  = 0
-  m[4]=sin(angle);m[5]=cos(angle)
-  m[8]  = 0;                       m[10] = 1
-}
-
-function matrixMultiply(m) {
-  // Make a copy of point coordinates
+function rotateAboutZ() {
+  // Make a copy of point coordinates as they change during multiplication
   var x = tx3D[0];
   var y = tx3D[1];
   var z = tx3D[2];
   var w = tx3D[3];
 
-  /* general form
-  tx3D[0] = (x * m[ 0]) + (y * m[ 4]) + (z * m[ 8]) + (w * m[12]);
-  tx3D[1] = (x * m[ 1]) + (y * m[ 5]) + (z * m[ 9]) + (w * m[13]);
-  tx3D[2] = (x * m[ 2]) + (y * m[ 6]) + (z * m[10]) + (w * m[14]);
-  tx3D[3] = (x * m[ 3]) + (y * m[ 7]) + (z * m[11]) + (w * m[15]);
+  /* General form
+  tx3D[0] = (x * mRotateZ[ 0]) + (y * mRotateZ[ 4]) + (z * mRotateZ[ 8]) + (w * mRotateZ[12]);
+  tx3D[1] = (x * mRotateZ[ 1]) + (y * mRotateZ[ 5]) + (z * mRotateZ[ 9]) + (w * mRotateZ[13]);
+  tx3D[2] = (x * mRotateZ[ 2]) + (y * mRotateZ[ 6]) + (z * mRotateZ[10]) + (w * mRotateZ[14]);
+  tx3D[3] = (x * mRotateZ[ 3]) + (y * mRotateZ[ 7]) + (z * mRotateZ[11]) + (w * mRotateZ[15]);
   */
 
-  // Optimized by removing terms that don't change for this program
-  tx3D[0] = (x * m[ 0]) + (y * m[ 4]) + (z * m[ 8])              ;
-  tx3D[1] = (x * m[ 1]) + (y * m[ 5])                            ;
-  tx3D[2] = (x * m[ 2])               + (z * m[10])              ;
-  tx3D[3] =                                            w         ;
+  // Optimized form: multiply just the nonzero parts of setRotateAboutZAxis
+  tx3D[0] = (x * mRotateZ[ 0]) + (y * mRotateZ[ 4])                                          ;
+  tx3D[1] = (x * mRotateZ[ 1]) + (y * mRotateZ[ 5])                                          ;
+  tx3D[2] =                                            z                                     ;
+  tx3D[3] =                                                                 w                ;
+}
+
+function setRotateAboutYAxis(angle) {
+  mRotateY[0]=cos(angle); mRotateY[1]  = 0;  mRotateY[2]=sin(angle); mRotateY[3]  = 0
+  mRotateY[4]  = 0;       mRotateY[5]  = 1;  mRotateY[6]  = 0;       mRotateY[7]  = 0
+  mRotateY[8]=-sin(angle);mRotateY[9]  = 0;  mRotateY[10]=cos(angle);mRotateY[11] = 0
+  mRotateY[12] = 0;       mRotateY[13] = 0;  mRotateY[14] = 0;       mRotateY[15] = 1
+}
+
+function rotateAboutY() {
+  // Make a copy of point coordinates as they change during multiplication
+  var x = tx3D[0];
+  var y = tx3D[1];
+  var z = tx3D[2];
+  var w = tx3D[3];
+
+  /* General form
+  tx3D[0] = (x * mRotateY[ 0]) + (y * mRotateY[ 4]) + (z * mRotateY[ 8]) + (w * mRotateY[12]);
+  tx3D[1] = (x * mRotateY[ 1]) + (y * mRotateY[ 5]) + (z * mRotateY[ 9]) + (w * mRotateY[13]);
+  tx3D[2] = (x * mRotateY[ 2]) + (y * mRotateY[ 6]) + (z * mRotateY[10]) + (w * mRotateY[14]);
+  tx3D[3] = (x * mRotateY[ 3]) + (y * mRotateY[ 7]) + (z * mRotateY[11]) + (w * mRotateY[15]);
+  */
+
+  // Optimized form: multiply just the nonzero parts of setRotateAboutYAxis
+  tx3D[0] = (x * mRotateY[ 0])                      + (z * mRotateY[ 8])                     ;
+  tx3D[1] =                       y                                                          ;
+  tx3D[2] = (x * mRotateY[ 2])                      + (z * mRotateY[10])                     ;
+  tx3D[3] =                                                              w                   ;
 }
 
 export function render3D(index,x,y,z) {
@@ -156,8 +153,8 @@ export function render3D(index,x,y,z) {
   tx3D[2] = z*2.0-1.0
   tx3D[3] = 1
 
-  matrixMultiply(mRotateZ)
-  matrixMultiply(mRotateY)
+  rotateAboutZ()
+  rotateAboutY()
 
   // Rendering based on Z axis in transformed space
   txZ = tx3D[2]
