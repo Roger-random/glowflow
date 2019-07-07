@@ -159,11 +159,17 @@ export function render3D(index,x,y,z) {
 
   // Rendering based on Z axis in transformed space
   txZ = tx3D[2]
+  hue = 1
+  saturation = 1
+  value = 1
+
   if (txZ > 0) {
     // Colorful multilayered liquid in the bottom of container
-    hsv(txZ*0.6,1,1)
+    hue = clamp(txZ,0,0.95)
   } else {
-    // Fades to dark as we get further above surface of liquid
-    hsv(0.01,1,1+txZ)
+    // Orange fades to black as we get further above surface of liquid
+    hue = 0.01
+    value = clamp(1+txZ,0,1)
   }
+  hsv(hue, saturation, value)
 }
