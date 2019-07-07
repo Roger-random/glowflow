@@ -21,7 +21,7 @@
 // Github: Roger-random / Twitter: @Regorlas
 
 // Accelerometer value will be filled in by Pixelblaze when sensor board is present
-export var accelerometer
+export var accelerometer = array(3)
 
 // How far the accelerometer vector has tilted relative to +Z axis in spherical coordinates.
 // 0 = vector is pointing up, aligned with +Z
@@ -35,7 +35,8 @@ var accelPolar
 var accelAzimuth
 
 // Matrix for transform calculations
-var m = array(16)
+var mRotateZ = array(16)
+var mRotateY = array(16)
 
 // Coordinate for matrix transform calculations
 var tx3D = array(4)
@@ -81,13 +82,14 @@ export function beforeRender(delta) {
     accelAzimuth = PI-atan(a[1]/-a[0])
   }
 
-  // Set transform matrix to identity
-  setIdentity()
+  // Precalculate rotation matrices
+  setRotateZAxis(accelAzimuth)
+  setRotateYAxis(accelPolar)
 }
 
 // 3D transform matrix math adapted from
 // https://developer.mozilla.org/en-US/docs/Web/API/WebGL_API/Matrix_math_for_the_web
-function setIdentity() {
+function setIdentity(m) {
   m[0]  = 1;  m[1]  = 0;  m[2]  = 0;  m[3]  = 0
   m[4]  = 0;  m[5]  = 1;  m[6]  = 0;  m[7]  = 0
   m[8]  = 0;  m[9]  = 0;  m[10] = 1;  m[11] = 0
@@ -102,6 +104,8 @@ function setRotateYAxis(angle) {
   m[12] = 0;       m[13] = 0;  m[14] = 0;       m[15] = 1
   */
 
+  var m = mRotateY
+  setIdentity(m)
   // Optimized by removing terms that don't change for this program
   m[0]=cos(angle); m[1]  = 0;  m[2]=sin(angle)
   m[4]  = 0;       m[5]  = 1
@@ -115,14 +119,15 @@ function setRotateZAxis(angle) {
   m[8]  = 0;      m[9]  = 0;       m[10] = 1;  m[11] = 0
   m[12] = 0;      m[13] = 0;       m[14] = 0;  m[15] = 1
   */
-
+  var m = mRotateZ
+  setIdentity(m)
   // Optimized by removing terms that don't change for this program
   m[0]=cos(angle);m[1]=-sin(angle);m[2]  = 0
   m[4]=sin(angle);m[5]=cos(angle)
   m[8]  = 0;                       m[10] = 1
 }
 
-function matrixMultiply() {
+function matrixMultiply(m) {
   // Make a copy of point coordinates
   var x = tx3D[0];
   var y = tx3D[1];
@@ -151,11 +156,8 @@ export function render3D(index,x,y,z) {
   tx3D[2] = z*2.0-1.0
   tx3D[3] = 1
 
-  setRotateZAxis(accelAzimuth)
-  matrixMultiply()
-
-  setRotateYAxis(accelPolar)
-  matrixMultiply()
+  matrixMultiply(mRotateZ)
+  matrixMultiply(mRotateY)
 
   // Rendering based on Z axis in transformed space
   txZ = tx3D[2]
