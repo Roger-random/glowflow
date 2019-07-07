@@ -101,7 +101,6 @@ function rotateAboutZ() {
   var x = tx3D[0];
   var y = tx3D[1];
   var z = tx3D[2];
-  var w = tx3D[3];
 
   /* General form
   tx3D[0] = (x * mRotateZ[ 0]) + (y * mRotateZ[ 4]) + (z * mRotateZ[ 8]) + (w * mRotateZ[12]);
@@ -114,7 +113,6 @@ function rotateAboutZ() {
   tx3D[0] = (x * mRotateZ[ 0]) + (y * mRotateZ[ 4])                                          ;
   tx3D[1] = (x * mRotateZ[ 1]) + (y * mRotateZ[ 5])                                          ;
   tx3D[2] =                                            z                                     ;
-  tx3D[3] =                                                                 w                ;
 }
 
 function setRotateAboutYAxis(angle) {
@@ -129,7 +127,6 @@ function rotateAboutY() {
   var x = tx3D[0];
   var y = tx3D[1];
   var z = tx3D[2];
-  var w = tx3D[3];
 
   /* General form
   tx3D[0] = (x * mRotateY[ 0]) + (y * mRotateY[ 4]) + (z * mRotateY[ 8]) + (w * mRotateY[12]);
@@ -142,7 +139,6 @@ function rotateAboutY() {
   tx3D[0] = (x * mRotateY[ 0])                      + (z * mRotateY[ 8])                     ;
   tx3D[1] =                       y                                                          ;
   tx3D[2] = (x * mRotateY[ 2])                      + (z * mRotateY[10])                     ;
-  tx3D[3] =                                                              w                   ;
 }
 
 export function render3D(index,x,y,z) {
@@ -151,7 +147,6 @@ export function render3D(index,x,y,z) {
   tx3D[0] = x*2.0-1.0
   tx3D[1] = y*2.0-1.0
   tx3D[2] = z*2.0-1.0
-  tx3D[3] = 1
 
   rotateAboutZ()
   rotateAboutY()
