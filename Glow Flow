@@ -1,0 +1,171 @@
+//////////////////////////////////////////////////////////////////////////////
+//
+// Glow Flow
+//
+// A Pixelblaze pattern to illuminate half of a 3D mapped volume based on value of
+// accelerometer on the Pixelblaze sensor expansion board. Renders illusion of a
+// half-full container of glowing fluid that flows to the bottom. Built on top of
+// "Accelerometer Tilt 3D" with sound-reactive elements copied from existing
+// Pixelblaze sample pattern "spectromatrix optim"
+//
+// Requires:
+// * Pixelblaze with sensor expansion board
+// * Pixel Mapper filled in with 3D (X,Y,Z) coordinates of LED pixels
+//
+// Roger Cheng 2019
+// https://newscrewdriver.com
+// Github: Roger-random / Twitter: @Regorlas
+
+// Accelerometer value will be filled in by Pixelblaze when sensor board is present
+export var accelerometer = array(3)
+
+// Matrix for transform calculations
+var mRotateZ = array(16)
+var mRotateY = array(16)
+
+// Coordinate for matrix transform calculations
+var tx3D = array(4)
+
+// Before rendering each frame, take an accelerometer reading and convert to spherical coordinates
+// https://en.wikipedia.org/wiki/List_of_common_coordinate_transformations#From_Cartesian_coordinates_2
+export function beforeRender(delta) {
+  // Take snapshot of accelerometer
+  a = accelerometer
+
+  // Adjust axis to fit mechanical chassis
+  a[0] = -a[0] // X axis is mounted reversed
+
+  // Precalculate rotation matrices
+  setRotateAboutZAxis(azimuthAngle(a[0],a[1]))
+  setRotateAboutYAxis(polarAngle(a[0],a[1],a[2]))
+}
+
+// Polar angle is how far the vector is tilted, relative to +Z axis. (On a globe, it is latitude.)
+// 0 = vector is pointing up, aligned with +Z
+// PI = vector is pointing down, aligned with -Z
+function polarAngle(x,y,z) {
+  polar = 0
+
+  if (z == 0) {
+    // Z = 0 means vector is somewhere on XY plane.
+    // Hard code answer is faster and avoids divide by zero.
+    polar = PI/2
+  } else if (z > 0) {
+    // +Z = between 0 and PI/2
+    polar = atan(sqrt(pow(x,2)+pow(y,2))/z)
+  } else {
+    // -Z = between PI/2 and PI
+    polar = PI-atan(sqrt(pow(x,2)+pow(y,2))/-z)
+  }
+
+  return polar
+}
+
+// Azimuth is direction of polar angle projected on XY plane. (On a globe, it is longitude.)
+// 0 = vector is aligned with +X
+// PI/2 = vector is aligned with +Y
+// -PI/2 = vector is aligned with -Y
+function azimuthAngle(x,y) {
+  azimuth = 0
+
+  if (x == 0) {
+    // X of zero means vector is aligned with Y axis one way or another.
+    // Hard code answer is faster and avoids divide by zero
+    if (y >= 0) {
+      // Aligned with +Y axis
+      azimuth = PI/2
+    } else {
+      // Aligned with -Y axis
+      azimuth = -PI/2
+    }
+  } else if (x > 0) {
+    // +X = somewhere between -PI/2 and PI/2
+    azimuth = atan(y/x)
+  } else {
+    // -X = somewhere between PI and PI/2 for +Y, between -PI and -PI/2 for -Y
+    azimuth = PI-atan(y/-x)
+  }
+
+  return azimuth
+}
+
+// 3D transform matrix math adapted from
+// https://developer.mozilla.org/en-US/docs/Web/API/WebGL_API/Matrix_math_for_the_web
+function setRotateAboutZAxis(angle) {
+  mRotateZ[0]=cos(angle);mRotateZ[1]=-sin(angle);mRotateZ[2]  = 0;  mRotateZ[3]  = 0
+  mRotateZ[4]=sin(angle);mRotateZ[5]=cos(angle); mRotateZ[6]  = 0;  mRotateZ[7]  = 0
+  mRotateZ[8]  = 0;      mRotateZ[9]  = 0;       mRotateZ[10] = 1;  mRotateZ[11] = 0
+  mRotateZ[12] = 0;      mRotateZ[13] = 0;       mRotateZ[14] = 0;  mRotateZ[15] = 1
+}
+
+function rotateAboutZ() {
+  // Make a copy of point coordinates as they change during multiplication
+  var x = tx3D[0];
+  var y = tx3D[1];
+  var z = tx3D[2];
+
+  /* General form
+  tx3D[0] = (x * mRotateZ[ 0]) + (y * mRotateZ[ 4]) + (z * mRotateZ[ 8]) + (w * mRotateZ[12]);
+  tx3D[1] = (x * mRotateZ[ 1]) + (y * mRotateZ[ 5]) + (z * mRotateZ[ 9]) + (w * mRotateZ[13]);
+  tx3D[2] = (x * mRotateZ[ 2]) + (y * mRotateZ[ 6]) + (z * mRotateZ[10]) + (w * mRotateZ[14]);
+  tx3D[3] = (x * mRotateZ[ 3]) + (y * mRotateZ[ 7]) + (z * mRotateZ[11]) + (w * mRotateZ[15]);
+  */
+
+  // Optimized form: multiply just the nonzero parts of setRotateAboutZAxis
+  tx3D[0] = (x * mRotateZ[ 0]) + (y * mRotateZ[ 4])                                          ;
+  tx3D[1] = (x * mRotateZ[ 1]) + (y * mRotateZ[ 5])                                          ;
+  tx3D[2] =                                            z                                     ;
+}
+
+function setRotateAboutYAxis(angle) {
+  mRotateY[0]=cos(angle); mRotateY[1]  = 0;  mRotateY[2]=sin(angle); mRotateY[3]  = 0
+  mRotateY[4]  = 0;       mRotateY[5]  = 1;  mRotateY[6]  = 0;       mRotateY[7]  = 0
+  mRotateY[8]=-sin(angle);mRotateY[9]  = 0;  mRotateY[10]=cos(angle);mRotateY[11] = 0
+  mRotateY[12] = 0;       mRotateY[13] = 0;  mRotateY[14] = 0;       mRotateY[15] = 1
+}
+
+function rotateAboutY() {
+  // Make a copy of point coordinates as they change during multiplication
+  var x = tx3D[0];
+  var y = tx3D[1];
+  var z = tx3D[2];
+
+  /* General form
+  tx3D[0] = (x * mRotateY[ 0]) + (y * mRotateY[ 4]) + (z * mRotateY[ 8]) + (w * mRotateY[12]);
+  tx3D[1] = (x * mRotateY[ 1]) + (y * mRotateY[ 5]) + (z * mRotateY[ 9]) + (w * mRotateY[13]);
+  tx3D[2] = (x * mRotateY[ 2]) + (y * mRotateY[ 6]) + (z * mRotateY[10]) + (w * mRotateY[14]);
+  tx3D[3] = (x * mRotateY[ 3]) + (y * mRotateY[ 7]) + (z * mRotateY[11]) + (w * mRotateY[15]);
+  */
+
+  // Optimized form: multiply just the nonzero parts of setRotateAboutYAxis
+  tx3D[0] = (x * mRotateY[ 0])                      + (z * mRotateY[ 8])                     ;
+  tx3D[1] =                       y                                                          ;
+  tx3D[2] = (x * mRotateY[ 2])                      + (z * mRotateY[10])                     ;
+}
+
+export function render3D(index,x,y,z) {
+  // x,y,z are in range from 0 to 1. Upscale them to range -1 to 1.
+  // This moves (0,0,0) to the center of the volume.
+  tx3D[0] = x*2.0-1.0
+  tx3D[1] = y*2.0-1.0
+  tx3D[2] = z*2.0-1.0
+
+  rotateAboutZ()
+  rotateAboutY()
+
+  // Rendering based on Z axis in transformed space
+  txZ = tx3D[2]
+  hue = 1
+  saturation = 1
+  value = 1
+
+  if (txZ > 0) {
+    // Colorful multilayered liquid in the bottom of container
+    hue = clamp(txZ,0,0.95)
+  } else {
+    // Orange fades to black as we get further above surface of liquid
+    hue = 0.01
+    value = clamp(1+txZ,0,1)
+  }
+  hsv(hue, saturation, value)
+}
