@@ -49,7 +49,7 @@ function calcPIController(pic, err) {
 
 // Values controlled via PI Controller
 var vals = array(pixelCount)
-export var sensitivity
+var sensitivity
 
 // Feedback given to PI Controller for adaptation
 var brightnessFeedback = 0
