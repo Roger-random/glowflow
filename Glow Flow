@@ -6,7 +6,8 @@
 // accelerometer on the Pixelblaze sensor expansion board. Renders illusion of a
 // half-full container of glowing fluid that flows to the bottom. Built on top of
 // "Accelerometer Tilt 3D" with sound-reactive elements copied from existing
-// Pixelblaze sample pattern "spectromatrix optim"
+// Pixelblaze sample pattern "blinkfade". The intent is to make the colorful
+// 'liquid' look like it is fizzing and popping in reaction to sound.
 //
 // Requires:
 // * Pixelblaze with sensor expansion board
@@ -16,8 +17,9 @@
 // https://newscrewdriver.com
 // Github: Roger-random / Twitter: @Regorlas
 
-// Accelerometer value will be filled in by Pixelblaze when sensor board is present
+// Sensor values will be filled in by Pixelblaze when sensor board is present
 export var accelerometer = array(3)
+export var energyAverage
 
 // Matrix for transform calculations
 var mRotateZ = array(16)
@@ -25,6 +27,32 @@ var mRotateY = array(16)
 
 // Coordinate for matrix transform calculations
 var tx3D = array(4)
+
+// PI Controller to dynamically adjust microphone sensitivity based on ambient level
+var targetFill = 0.01
+var pic = makePIController(.05, .15, 1000, 0, 1000)
+
+function makePIController(kp, ki, start, min, max) {
+  var pic = array(5)
+  pic[0] = kp
+  pic[1] = ki
+  pic[2] = start
+  pic[3] = min
+  pic[4] = max
+  return pic
+}
+
+function calcPIController(pic, err) {
+  pic[2] = clamp(pic[2] + err, pic[3], pic[4])
+  return max(pic[0] * err + pic[1] * pic[2],.3)
+}
+
+// Values controlled via PI Controller
+var vals = array(pixelCount)
+export var sensitivity
+
+// Feedback given to PI Controller for adaptation
+var brightnessFeedback = 0
 
 // Before rendering each frame, take an accelerometer reading and convert to spherical coordinates
 // https://en.wikipedia.org/wiki/List_of_common_coordinate_transformations#From_Cartesian_coordinates_2
@@ -38,6 +66,16 @@ export function beforeRender(delta) {
   // Precalculate rotation matrices
   setRotateAboutZAxis(azimuthAngle(a[0],a[1]))
   setRotateAboutYAxis(polarAngle(a[0],a[1],a[2]))
+
+  // Update PI Controller & associated values
+  sensitivity = calcPIController(pic, targetFill - brightnessFeedback / pixelCount);
+  brightnessFeedback = 0
+  for (i = 0; i < pixelCount; i++) {
+    vals[i] -= .001 * delta + abs(energyAverage * sensitivity / 5000)
+    if (vals[i] <= 0) {
+      vals[i] = energyAverage * sensitivity * random(1)
+    }
+  }
 }
 
 // Polar angle is how far the vector is tilted, relative to +Z axis. (On a globe, it is latitude.)
@@ -153,10 +191,15 @@ export function render3D(index,x,y,z) {
   rotateAboutZ()
   rotateAboutY()
 
+  // Microphone controlled value for this pixel
+  micV = vals[index]*3
+  micV = micV * micV
+  brightnessFeedback += clamp(micV,0,1)
+
   // Rendering based on Z axis in transformed space
   txZ = tx3D[2]
   hue = 1
-  saturation = 1
+  saturation = 1 - clamp(micV,0,0.1)
   value = 1
 
   if (txZ > 0) {
