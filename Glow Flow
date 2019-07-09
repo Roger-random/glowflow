@@ -20,6 +20,7 @@
 // Sensor values will be filled in by Pixelblaze when sensor board is present
 export var accelerometer = array(3)
 export var energyAverage
+export var light
 
 // Matrix for transform calculations
 var mRotateZ = array(16)
@@ -54,6 +55,9 @@ var sensitivity
 // Feedback given to PI Controller for adaptation
 var brightnessFeedback = 0
 
+// HSV value multiplier adjusted based on light sensor
+var lightAdj
+
 // Before rendering each frame, take an accelerometer reading and convert to spherical coordinates
 // https://en.wikipedia.org/wiki/List_of_common_coordinate_transformations#From_Cartesian_coordinates_2
 export function beforeRender(delta) {
@@ -76,6 +80,9 @@ export function beforeRender(delta) {
       vals[i] = energyAverage * sensitivity * random(1)
     }
   }
+
+  // Calculate lighting adjustment factor
+  lightAdj = clamp(light,0.01,0.4) // Can only go up to about 40% brightness on USB power bank
 }
 
 // Polar angle is how far the vector is tilted, relative to +Z axis. (On a globe, it is latitude.)
@@ -210,5 +217,9 @@ export function render3D(index,x,y,z) {
     hue = 0.01
     value = clamp(1+txZ,0,1)
   }
+
+  // Adjust for ambient lighting level
+  value = value * lightAdj
+
   hsv(hue, saturation, value)
 }
