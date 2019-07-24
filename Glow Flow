@@ -58,14 +58,16 @@ var brightnessFeedback = 0
 // HSV value multiplier adjusted based on light sensor
 var lightAdj
 
+// Accelerometer snapshot adjusted for mechanical chassis.
+var a = array(3)
+
 // Before rendering each frame, take an accelerometer reading and convert to spherical coordinates
 // https://en.wikipedia.org/wiki/List_of_common_coordinate_transformations#From_Cartesian_coordinates_2
 export function beforeRender(delta) {
-  // Take snapshot of accelerometer
-  a = accelerometer
-
-  // Adjust axis to fit mechanical chassis
-  a[0] = -a[0] // X axis is mounted reversed
+  // Take snapshot of accelerometer, adjust axis to fit mechanical chassis
+  a[0] = -accelerometer[0] // X axis is mounted reversed
+  a[1] =  accelerometer[1]
+  a[2] =  accelerometer[2]
 
   // Precalculate rotation matrices
   setRotateAboutZAxis(azimuthAngle(a[0],a[1]))
@@ -82,7 +84,7 @@ export function beforeRender(delta) {
   }
 
   // Calculate lighting adjustment factor
-  lightAdj = clamp(light,0.01,0.4) // Can only go up to about 40% brightness on USB power bank
+  lightAdj = clamp(light,0.01,1.0) // Adjust 1.0 downwards if power supply can't handle full power
 }
 
 // Polar angle is how far the vector is tilted, relative to +Z axis. (On a globe, it is latitude.)
