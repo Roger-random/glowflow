@@ -65,9 +65,9 @@ var a = array(3)
 // https://en.wikipedia.org/wiki/List_of_common_coordinate_transformations#From_Cartesian_coordinates_2
 export function beforeRender(delta) {
   // Take snapshot of accelerometer, adjust axis to fit mechanical chassis
-  a[0] = -accelerometer[0] // X axis is mounted reversed
-  a[1] =  accelerometer[1]
-  a[2] =  accelerometer[2]
+  a[0] =  accelerometer[0]
+  a[1] = -accelerometer[2]
+  a[2] = -accelerometer[1]
 
   // Precalculate rotation matrices
   setRotateAboutZAxis(azimuthAngle(a[0],a[1]))
