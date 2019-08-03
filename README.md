@@ -16,3 +16,6 @@ Project Page on Hackaday.io: https://hackaday.io/project/166871
 Sporatic Twitter updates [part 1](https://twitter.com/Regorlas/status/1143973037898776576) and [part 2](https://twitter.com/Regorlas/status/1149778693864054784).
 
 For more details see [build log entries tagged "Glow Flow" on NewScrewdriver.com](https://newscrewdriver.com/tag/glow-flow/)
+
+Schematic:
+![Glow Flow schematic](Glow%20Flow%20Schematic.png)
