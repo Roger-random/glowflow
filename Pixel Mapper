@@ -1,0 +1,8 @@
+function (pixelCount) {
+  var map = [];
+  for (i = 0; i < pixelCount; i++) {
+    c = -i * 10 / pixelCount * Math.PI * 2
+    map.push([Math.cos(c), Math.sin(c), 1-(i/pixelCount)])
+  }
+  return map
+}
